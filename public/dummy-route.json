@@ -1,0 +1,22 @@
+{
+  "today": [
+    {"latitude": 17.4474, "longitude": 78.4762, "name": "Amerpet Metro", "eta": "08:00"},
+    {"latitude": 17.4400, "longitude": 78.4500, "name": "SR Nagar", "eta": "08:15"},
+    {"latitude": 17.4450, "longitude": 78.4200, "name": "Kukatpally", "eta": "08:30"},
+    {"latitude": 17.4508, "longitude": 78.3848, "name": "HiTech City", "eta": "08:45"}
+  ],
+  "yesterday": [
+    {"latitude": 17.4508, "longitude": 78.3848, "name": "HiTech City", "eta": "17:00"},
+    {"latitude": 17.4474, "longitude": 78.4762, "name": "Amerpet", "eta": "17:45"}
+  ],
+  "lastweek": [
+    {"latitude": 17.3616, "longitude": 78.4740, "name": "LB Nagar", "eta": "09:00"},
+    {"latitude": 17.4474, "longitude": 78.4762, "name": "Amerpet", "eta": "09:45"},
+    {"latitude": 17.4508, "longitude": 78.3848, "name": "HiTech City", "eta": "10:30"}
+  ],
+  "lastmonth": [
+    {"latitude": 17.4508, "longitude": 78.3848, "name": "HiTech City", "eta": "11:00"},
+    {"latitude": 17.4887, "longitude": 78.3860, "name": "Gachibowli", "eta": "11:20"},
+    {"latitude": 17.5120, "longitude": 78.3710, "name": "Nanakramguda", "eta": "11:45"}
+  ]
+}
