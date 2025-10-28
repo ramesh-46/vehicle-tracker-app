@@ -93,7 +93,6 @@ export default function VehicleMap() {
   const [currentSegment, setCurrentSegment] = useState(0);
   const [estimatedSpeed, setEstimatedSpeed] = useState(0);
   const [totalDistance, setTotalDistance] = useState(0); // km
-  const [distanceFromLastStop, setDistanceFromLastStop] = useState(0); // km
   const [batteryLevel, setBatteryLevel] = useState(87); // %
   const [todayRunning, setTodayRunning] = useState("00h:00m");
   const [todayStopped, setTodayStopped] = useState("00h:00m");
@@ -151,7 +150,7 @@ export default function VehicleMap() {
         setProgressPercent(0);
         setCurrentSegment(0);
         setTotalDistance(0);
-        setDistanceFromLastStop(0);
+        setBatteryLevel(87);
         setTodayRunning("00h:00m");
         setTodayStopped("00h:00m");
         setTodayIdle("00h:00m");
@@ -205,6 +204,9 @@ export default function VehicleMap() {
 
     const totalPoints = osrmRoute.length;
     const duration = (1000 / speedFactor) * totalPoints * 0.025;
+
+    // Reset any previous animation state
+    cancelAnim();
 
     segmentStartRef.current = {
       startTime: performance.now(),
@@ -290,10 +292,54 @@ export default function VehicleMap() {
     return `${h.toString().padStart(2, '0')}h:${m.toString().padStart(2, '0')}m`;
   };
 
-  useEffect(() => {
-    if (isPlaying) startAnimation();
-    return () => cancelAnim();
-  }, [isPlaying, speedFactor]);
+  // Play/Pause handler — now bulletproof
+  const handlePlayPause = () => {
+    if (!osrmRoute || osrmRoute.length === 0) {
+      alert("Route not ready. Please wait.");
+      return;
+    }
+
+    if (isPlaying) {
+      setIsPlaying(false);
+      cancelAnim();
+    } else {
+      setIsPlaying(true);
+      startAnimation(); // Start immediately
+    }
+  };
+
+  const handleRestart = () => {
+    setIsPlaying(false);
+    cancelAnim();
+    setTimeout(() => {
+      if (osrmRoute.length > 0) {
+        setAnimPos(osrmRoute[0]);
+        setProgressPercent(0);
+        setCurrentSegment(0);
+        setTotalDistance(0);
+        setBatteryLevel(87);
+        setTodayRunning("00h:00m");
+        setTodayStopped("00h:00m");
+        setTodayIdle("00h:00m");
+        setCurrentStatus("STOPPED");
+        setTimestamp(new Date().toLocaleString());
+        setIsPlaying(true);
+        startAnimation(); // Start after restart
+      }
+    }, 100);
+  };
+
+  // Skip to destination (instantly jump to end)
+  const handleSkipToDestination = () => {
+    setIsPlaying(false);
+    cancelAnim();
+    if (osrmRoute.length > 0) {
+      setAnimPos(osrmRoute[osrmRoute.length - 1]); // Go to last point
+      setProgressPercent(100);
+      setCurrentSegment(waypoints.length - 1);
+      setCurrentStatus("STOPPED");
+    }
+  };
 
   // Handle slider change
   const handleSliderChange = (e) => {
@@ -306,34 +352,6 @@ export default function VehicleMap() {
     if (osrmRoute[index]) {
       setAnimPos(osrmRoute[index]);
     }
-  };
-
-  const handlePlayPause = () => {
-    if (!isPlaying && (!osrmRoute || osrmRoute.length === 0)) {
-      alert("Route not ready. Please wait.");
-      return;
-    }
-    setIsPlaying(!isPlaying);
-  };
-
-  const handleRestart = () => {
-    setIsPlaying(false);
-    cancelAnim();
-    setTimeout(() => {
-      if (osrmRoute.length > 0) {
-        setAnimPos(osrmRoute[0]);
-        setProgressPercent(0);
-        setCurrentSegment(0);
-        setTotalDistance(0);
-        setDistanceFromLastStop(0);
-        setTodayRunning("00h:00m");
-        setTodayStopped("00h:00m");
-        setTodayIdle("00h:00m");
-        setCurrentStatus("STOPPED");
-        setTimestamp(new Date().toLocaleString());
-        setIsPlaying(true);
-      }
-    }, 100);
   };
 
   // UI
@@ -385,17 +403,21 @@ export default function VehicleMap() {
             <Polyline positions={osrmRoute} pathOptions={{ color: "#3b82f6", weight: 6, opacity: 0.85 }} />
           )}
 
-          {/* Waypoint markers */}
-          {waypoints.map((wp, i) => (
-            <Marker key={i} position={[wp.latitude, wp.longitude]} icon={waypointIcon()}>
-              <Popup>
-                <div style={{ minWidth: "180px", padding: "10px" }}>
-                  <div style={{ fontWeight: "600", color: "#10b981", fontSize: "14px" }}>{wp.name}</div>
-                  <div style={{ fontSize: "12px", color: "#4b5563", marginTop: "4px" }}>ETA: {wp.eta}</div>
-                </div>
-              </Popup>
-            </Marker>
-          ))}
+          {/* Waypoint markers (skip first one) */}
+          {waypoints.map((wp, i) => {
+            // Only show waypoints from index 1 onwards (not the start point)
+            if (i === 0) return null;
+            return (
+              <Marker key={i} position={[wp.latitude, wp.longitude]} icon={waypointIcon()}>
+                <Popup>
+                  <div style={{ minWidth: "180px", padding: "10px" }}>
+                    <div style={{ fontWeight: "600", color: "#10b981", fontSize: "14px" }}>{wp.name}</div>
+                    <div style={{ fontSize: "12px", color: "#4b5563", marginTop: "4px" }}>ETA: {wp.eta}</div>
+                  </div>
+                </Popup>
+              </Marker>
+            );
+          })}
 
           {/* Vehicle */}
           <Marker position={animPos} icon={vehicleDivIcon(52)} ref={markerRef}>
@@ -696,6 +718,19 @@ export default function VehicleMap() {
               minWidth: "100px"
             }}>
               🔁 Restart
+            </button>
+            <button onClick={handleSkipToDestination} style={{
+              padding: "10px 18px",
+              borderRadius: "12px",
+              border: "none",
+              background: "#f59e0b",
+              color: "white",
+              fontWeight: "600",
+              cursor: "pointer",
+              boxShadow: "0 4px 10px rgba(245, 158, 11, 0.3)",
+              minWidth: "100px"
+            }}>
+              🚀 Skip to End
             </button>
           </div>
 
